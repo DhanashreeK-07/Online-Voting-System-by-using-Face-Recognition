@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Capture</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h2>Face Capture</h2>
+    <video id="video" width="640" height="480" autoplay></video>
+    <button id="capture">Capture Face</button>
+    <canvas id="canvas" width="640" height="480"></canvas>
+    <button id="submit">Submit</button>
+
+    <script>
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(function (stream) {
+                var video = document.getElementById('video');
+                video.srcObject = stream;
+            })
+            .catch(function (err) {
+                console.log("An error occurred: " + err);
+            });
+
+        document.getElementById('capture').addEventListener('click', function () {
+            var video = document.getElementById('video');
+            var canvas = document.getElementById('canvas');
+            var context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Set the image data in the hidden input field
+            document.getElementById('imageData').value = canvas.toDataURL('image/png');
+        });
+
+        document.getElementById('submit').addEventListener('click', function () {
+            var canvas = document.getElementById('canvas');
+            var imageData = canvas.toDataURL('image/png');
+
+            // Convert base64 image data to a Blob object
+            var byteString = atob(imageData.split(',')[1]);
+            var mimeString = imageData.split(',')[0].split(':')[1].split(';')[0];
+            var arrayBuffer = new ArrayBuffer(byteString.length);
+            var uint8Array = new Uint8Array(arrayBuffer);
+
+            for (var i = 0; i < byteString.length; i++) {
+                uint8Array[i] = byteString.charCodeAt(i);
+            }
+
+            var blob = new Blob([arrayBuffer], { type: mimeString });
+
+            // Create FormData object and append the image as a file
+            var formData = new FormData();
+            formData.append('imageData', blob, 'captured_face.png');
+
+            // Use Axios to send the FormData to the server
+            axios.post('/capture', formData)
+                .then(function (response) {
+                    alert('Face captured successfully');
+                    window.location.href = '/';
+                })
+                .catch(function (error) {
+                    console.error('Error capturing face:', error);
+                });
+        });
+    </script>
+</body>
+</html>
